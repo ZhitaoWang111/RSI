@@ -1,0 +1,41 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 5e61e4c..d21b8e8 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -19,8 +19,14 @@ extend-exclude = "deprecated/"
+ # https://pypi.org/project/setuptools-scm/
+ # NOTE: If these values are updated, they need to be also updated in `__init__.py`.
+ [tool.setuptools_scm]
+-version_scheme = "no-guess-dev"
+-local_scheme = "dirty-tag"
++# Local patch (ASPIRE checkout): pin the version so metadata generation does not
++# depend on git tags or working-tree state. Upstream derives 0.7.8 from the
++# `v0.7.8` tag, which shallow submodule clones lose; the stock `no-guess-dev`
++# scheme then appends `.post1.dev0` and `dirty-tag` adds a `+dirty` suffix, so
++# neither matches uv.lock. `plain` + `no-local-version` yields exactly `0.7.8`.
++version_scheme = "plain"
++local_scheme = "no-local-version"
++fallback_version = "0.7.8"
+ 
+ [tool.isort]
+ # see https://github.com/PyCQA/isort#multi-line-output-modes
+diff --git a/setup.py b/setup.py
+index 393d489..aa3e690 100644
+--- a/setup.py
++++ b/setup.py
+@@ -32,7 +32,14 @@ extra_cuda_args = {
+         "--fmad=true",
+         "--prec-div=false",
+         "--prec-sqrt=false",
+-    ]
++        # Local patch (ASPIRE checkout): build as C++17. This header defines a
++        # global `lerp`, which clashes with `std::lerp` that libstdc++ exposes
++        # under C++20 (gcc 13). C++17 keeps the upstream code compiling as-is.
++        "-std=c++17",
++    ],
++    "cxx": [
++        "-std=c++17",
++    ],
+ }
+ 
+ if sys.platform == "win32":

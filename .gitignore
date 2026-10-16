@@ -1,0 +1,37 @@
+# Vendored upstream repos — all of `third_party/` is `git clone`-able via scripts/setup_third_party.sh
+third_party/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.venv-*/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Experiment outputs and caches
+outputs/
+runs/
+logs/
+results/
+wandb/
+*.ckpt
+
+# uv
+.uv-cache/
+# Note: the local uv cache lives at ~/.cache/uv by default and is not tracked here.
+
+# Build artifacts from the cuRobo CUDA extension build
+*.so
+build/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.local.md
