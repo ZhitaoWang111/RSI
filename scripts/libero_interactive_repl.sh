@@ -23,7 +23,11 @@ CONFIG="${CONFIG:-env_configs/libero/franka_libero_traced.yaml}"
 
 export ASPIRE_ROOT="$SIM_DIR"
 export ASPIRE_INTEGRATION_REAL=1
-export MUJOCO_GL=egl
+# EGL is faster but needs a GPU-capable headless GL stack (/dev/dri + glvnd
+# vendor config); many containers lack it and need OSMesa instead.
+# setup_aspire_env.sh reports which one it settled on. Override with e.g.
+#   MUJOCO_GL=osmesa scripts/libero_interactive_repl.sh
+export MUJOCO_GL="${MUJOCO_GL:-egl}"
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 export PYTHONPATH="$REPO_ROOT/third_party/ASPIRE"
 

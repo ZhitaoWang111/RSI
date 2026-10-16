@@ -33,9 +33,59 @@ bash scripts/setup_third_party.sh
 # 2. 应用必要补丁
 bash scripts/apply_patches.sh
 
-# 3. 搭建 ASPIRE 环境并验证
+# 3.（国内环境，可选但强烈推荐）把 uv.lock 指向镜像源
+bash scripts/use_mirror.sh              # 或 bash scripts/use_mirror.sh tuna
+
+# 4. 搭建 ASPIRE 环境并验证
 bash scripts/setup_aspire_env.sh
 ```
+
+第 4 步会自动探测可用的离屏渲染后端（EGL 或 OSMesa）并跑冒烟测试。
+
+## 镜像加速（国内环境）
+
+实测（阿里云 DSW，804MB 的 torch cu126 轮子）：
+
+| 来源 | 耗时 | 速度 |
+|---|---|---|
+| PyPI | ~23 分钟 | 0.58 MB/s |
+| mirrors.aliyun.com | **42.7 秒** | **19.7 MB/s** |
+
+镜像文件与 PyPI 字节相同（已验证 sha256 一致），所以改写 URL 后 `uv.lock` 的完整性校验依然通过。
+
+`scripts/use_mirror.sh` 会改写 `uv.lock` 中的**三类** URL：
+
+1. wheel/sdist 文件 URL（`files.pythonhosted.org`）
+2. PyTorch CUDA 索引（`download.pytorch.org`、`download-r2.pytorch.org`）
+3. **registry 声明**（`pypi.org/simple`）—— 容易漏，漏了 uv 仍会去 PyPI 查索引
+
+原文件备份为 `uv.lock.orig`，`bash scripts/use_mirror.sh restore` 可还原。
+
+**已知缺口**：构建时依赖（如 `egl-probe` 需要的 `cmake`）是运行时解析的，**不走 `uv.lock`**。脚本通过 `UV_DEFAULT_INDEX` 覆盖，需要时手动导出：
+
+```bash
+export UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
+export UV_INDEX_STRATEGY=unsafe-best-match
+```
+
+## 离屏渲染：EGL 与 OSMesa
+
+MuJoCo 需要无头 GL 后端。ASPIRE 默认用 EGL（走 GPU，快），但**很多容器镜像不支持**——典型报错：
+
+```
+ImportError: Cannot initialize a EGL device display. This likely means that your
+EGL driver does not support the PLATFORM_DEVICE extension...
+```
+
+已确认的一个例子是阿里云 DSW 容器：NVIDIA 设备节点（`/dev/nvidia0` 等）齐全，但 `/usr/share/glvnd/egl_vendor.d/` 目录**整个不存在**，且**缺 `/dev/dri`**，导致 EGL 无法枚举设备。
+
+**OSMesa 兜底**：纯 CPU 软件渲染，装 `libosmesa6` 即可用，兼容性极好，代价是速度。`setup_aspire_env.sh` 会先测 EGL，失败则自动切 OSMesa 并报告结果。
+
+```bash
+MUJOCO_GL=osmesa bash scripts/setup_aspire_env.sh   # 强制走软件渲染
+```
+
+**注意**：OSMesa 做小规模调试没问题，但大量渲染（如 LIBERO-Pro 完整评测）性能会明显受限。要上 GPU 渲染需要用带完整 EGL 配置的镜像。
 
 ## 环境要求（已验证配置）
 
@@ -73,14 +123,17 @@ CUDA 12.8 对两者都兼容。
 4. **用 `--frozen` 而非 `--locked`** —— 补丁改变元数据后 `uv.lock` 校验会失败；`--frozen` 直接采用锁文件中的版本。
 5. **nvidia 库半损坏** —— `uv sync` 后个别 `nvidia-*-cu12` 包可能出现「dist-info 存在但 `.so` 缺失」，需 `--force-reinstall` 补装。
 6. **LIBERO 首次运行交互提示** —— 会询问数据集路径并写 `~/.libero/config.yaml`，在非交互环境（CI/pytest）下需预先用 `echo N | python3 -c "import libero"` 生成。
+7. **容器内 EGL 不可用** —— 见下节；脚本会自动退回 OSMesa。
+8. **`uv.lock` 的 registry 声明容易被漏改** —— 只改 wheel 的 URL 不够，uv 仍会去 PyPI 查索引，表现为卡住不动。
 
 ## 状态
 
-| 项目 | 环境 | 冒烟测试 |
-|---|---|---|
-| ASPIRE | ✅ 已搭建 | ✅ `tests/test_libero.py` 通过（免凭据） |
-| ENPIRE | ⏳ 未开始 | — |
-| Dream-RSI | — | 上游无代码可复现 |
+| 项目 | 环境 | 冒烟测试 | 渲染后端 |
+|---|---|---|---|
+| ASPIRE（本地，Ubuntu 24.04 + RTX 5070 Ti） | ✅ | ✅ | EGL |
+| ASPIRE（阿里云 DSW，Ubuntu 22.04 + RTX PRO 5000） | ✅ | ✅ | OSMesa |
+| ENPIRE | ⏳ 未开始 | — | — |
+| Dream-RSI | — | — | 上游无代码可复现 |
 
 ## 参考
 
