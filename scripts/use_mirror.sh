@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Rewrite the URL hosts recorded in third_party/ASPIRE/aspire/sim/uv.lock so
+# Rewrite the URL hosts recorded in Submodule/ASPIRE/aspire/sim/uv.lock so
 # that uv pulls from a domestic mirror instead of PyPI.
 #
 # Why this works: mirror files are byte-identical to PyPI's (verified by
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LOCK="$REPO_ROOT/third_party/ASPIRE/aspire/sim/uv.lock"
+LOCK="$REPO_ROOT/Submodule/ASPIRE/aspire/sim/uv.lock"
 BACKUP="$LOCK.orig"
 
 [ -f "$LOCK" ] || { echo "uv.lock not found: $LOCK"; echo "Run scripts/setup_third_party.sh first."; exit 1; }

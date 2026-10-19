@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PATCH_DIR="$REPO_ROOT/patches"
-ASPIRE="$REPO_ROOT/third_party/ASPIRE"
+ASPIRE="$REPO_ROOT/Submodule/ASPIRE"
 CUROBO="$ASPIRE/aspire/sim/cap/third_party/curobo"
 
 apply_patch() {

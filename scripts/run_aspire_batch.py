@@ -42,7 +42,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ASPIRE_ROOT = REPO_ROOT / "third_party" / "ASPIRE"
+ASPIRE_ROOT = REPO_ROOT / "Submodule" / "ASPIRE"
 SIM_DIR = ASPIRE_ROOT / "aspire" / "sim"
 
 

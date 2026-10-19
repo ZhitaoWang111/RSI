@@ -47,7 +47,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SIM_DIR="$REPO_ROOT/third_party/ASPIRE/aspire/sim"
+SIM_DIR="$REPO_ROOT/Submodule/ASPIRE/aspire/sim"
 VENV="$SIM_DIR/.venv-libero"
 PY="$VENV/bin/python3"
 

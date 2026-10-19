@@ -1,5 +1,5 @@
-# Vendored upstream repos — all of `third_party/` is `git clone`-able via scripts/setup_third_party.sh
-third_party/
+# Vendored upstream repos — all of `Submodule/` is re-clonable via scripts/setup_third_party.sh
+Submodule/
 
 # Python
 __pycache__/

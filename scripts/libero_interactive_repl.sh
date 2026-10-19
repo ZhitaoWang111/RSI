@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SIM_DIR="$REPO_ROOT/third_party/ASPIRE/aspire/sim"
+SIM_DIR="$REPO_ROOT/Submodule/ASPIRE/aspire/sim"
 VENV="$SIM_DIR/.venv-libero"
 
 SUITE="${SUITE:-libero_goal_swap}"
@@ -29,7 +29,7 @@ export ASPIRE_INTEGRATION_REAL=1
 #   MUJOCO_GL=osmesa scripts/libero_interactive_repl.sh
 export MUJOCO_GL="${MUJOCO_GL:-egl}"
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
-export PYTHONPATH="$REPO_ROOT/third_party/ASPIRE"
+export PYTHONPATH="$REPO_ROOT/Submodule/ASPIRE"
 
 echo "suite=$SUITE task=$TASK trial=$TRIAL"
 echo "At the REPL, try:"

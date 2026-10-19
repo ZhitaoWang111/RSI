@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 #
 # Clone the upstream RSI repos at pinned commits and initialize ASPIRE's
-# submodules. Everything lands in third_party/ (gitignored).
+# submodules. Everything lands in Submodule/ (gitignored).
 #
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-THIRD_PARTY="$REPO_ROOT/third_party"
+THIRD_PARTY="$REPO_ROOT/Submodule"
 mkdir -p "$THIRD_PARTY"
 
-# --- Upstream repos (commits verified 2026-10-16) ----------------------------
+# --- Upstream repos (commits verified 2026-10-16, EmbodiedEvo 2026-10-19) ----
 ASPIRE_COMMIT="f4c8939aab0af9b97690c561bd80e282940f7886"
 ENPIRE_COMMIT="99ee90acf65b5b18957c8382ad580db999528be3"
 DREAMRSI_COMMIT="4149ea9181ab1db80f85717ffda2c9f0f130e85b"
+EMBODIEDEVO_COMMIT="470278c478bdb5e4b6f17dde1ea0393761f230f0"
 
 clone_pinned() {
   local name="$1" url="$2" commit="$3"
@@ -28,9 +29,10 @@ clone_pinned() {
   echo "    -> $name @ $(git -C "$dest" rev-parse --short HEAD)"
 }
 
-clone_pinned ASPIRE     https://github.com/NVlabs/ASPIRE.git      "$ASPIRE_COMMIT"
-clone_pinned ENPIRE     https://github.com/NVlabs/ENPIRE.git      "$ENPIRE_COMMIT"
-clone_pinned Dream-RSI  https://github.com/zhengkid/Dream-RSI.git "$DREAMRSI_COMMIT"
+clone_pinned ASPIRE      https://github.com/NVlabs/ASPIRE.git          "$ASPIRE_COMMIT"
+clone_pinned ENPIRE      https://github.com/NVlabs/ENPIRE.git          "$ENPIRE_COMMIT"
+clone_pinned Dream-RSI   https://github.com/zhengkid/Dream-RSI.git     "$DREAMRSI_COMMIT"
+clone_pinned EmbodiedEvo https://github.com/Einsia/EmbodiedEvo.git     "$EMBODIEDEVO_COMMIT"
 
 # --- ASPIRE submodules -------------------------------------------------------
 # All 7 are required. `uv` evaluates every workspace member during resolution,
@@ -70,8 +72,8 @@ cat <<'EOF'
     ASPIRE's `b1k` submodule contains Pixar USD assets whose bundled license
     prohibits redistribution without Pixar's written authorization. Other
     pinned dependencies (SAM 3, cuRobo, Contact-GraspNet) carry custom
-    licenses. Do not re-publish third_party/ or any recursive copy of it.
-    See third_party/ASPIRE/NOTICE and LICENSES/evidence/SUBMODULE_AUDIT.md.
+    licenses. Do not re-publish Submodule/ or any recursive copy of it.
+    See Submodule/ASPIRE/NOTICE and LICENSES/evidence/SUBMODULE_AUDIT.md.
 
 [done] third_party ready
 EOF

@@ -9,18 +9,19 @@ docs/          调研笔记
 papers/        论文 PDF（原创与中文版）
 patches/       对上游代码的必要补丁
 scripts/       环境重建脚本
-third_party/   （gitignored）上游仓库，由脚本拉取
+Submodule/     （gitignored）上游仓库，由脚本拉取
 ```
 
-## 为什么 third_party 不进仓库
+## 为什么 Submodule 不进仓库
 
-`third_party/` 下是三个上游仓库的独立 clone，总计约 15G（含虚拟环境）。它们各有自己的 remote、许可证和分发限制：
+`Submodule/` 下是四个上游仓库的独立 clone，总计约 16G（含虚拟环境）。它们各有自己的 remote、许可证和分发限制：
 
 | 仓库 | 上游 | 许可证 |
 |---|---|---|
 | ASPIRE | [NVlabs/ASPIRE](https://github.com/NVlabs/ASPIRE) | Apache-2.0（含第三方限制，见下） |
 | ENPIRE | [NVlabs/ENPIRE](https://github.com/NVlabs/ENPIRE) | Apache-2.0 |
 | Dream-RSI | [zhengkid/Dream-RSI](https://github.com/zhengkid/Dream-RSI) | 仅项目页，无代码 |
+| EmbodiedEvo | [Einsia/EmbodiedEvo](https://github.com/Einsia/EmbodiedEvo) | 见仓库 LICENSE |
 
 **重要**：ASPIRE 的 `NOTICE` 声明其 `b1k` 子模块含 Pixar 资产，**禁止未经书面授权再分发**；SAM3、cuRobo、Contact-GraspNet 也各有自定义许可。因此本仓库不包含任何上游源码或其子模块内容，请通过官方渠道获取。
 
