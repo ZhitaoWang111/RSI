@@ -35,3 +35,10 @@ Thumbs.db
 .vscode/
 *.swp
 *.local.md
+
+# Credentials — never commit API tokens or gateway keys
+key.json
+gw_key.json
+*credentials*.json
+*.secret
+.env
