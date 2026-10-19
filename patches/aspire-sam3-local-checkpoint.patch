@@ -1,0 +1,58 @@
+diff --git a/aspire/sim/cap/serving/launch_sam3_server.py b/aspire/sim/cap/serving/launch_sam3_server.py
+index 640dc31..23e24a0 100644
+--- a/aspire/sim/cap/serving/launch_sam3_server.py
++++ b/aspire/sim/cap/serving/launch_sam3_server.py
+@@ -9,6 +9,7 @@ import base64
+ import functools
+ import io
+ import logging
++import os
+ from typing import Any, List, Tuple
+ 
+ import numpy as np
+@@ -243,11 +244,26 @@ def main(
+     device: str = "cuda",
+     port: int = 8114,
+     host: str = "127.0.0.1",
++    checkpoint_path: str | None = None,
+ ):
+     global _MODEL, _PROCESSOR, _DEVICE
+ 
+     _DEVICE = device
+ 
++    # Local patch (ASPIRE checkout): allow loading a pre-downloaded checkpoint
++    # instead of fetching the gated `facebook/sam3` weights from Hugging Face.
++    # Precedence: explicit --checkpoint-path, then $SAM3_CHECKPOINT, then
++    # upstream behaviour (download from HF). Passing a path also disables the
++    # HF fetch via load_from_HF=False, since keeping it True would still attempt
++    # a download whenever checkpoint_path was None.
++    if checkpoint_path is None:
++        checkpoint_path = os.environ.get("SAM3_CHECKPOINT") or None
++    if checkpoint_path is not None and not os.path.isfile(checkpoint_path):
++        raise FileNotFoundError(
++            f"SAM3 checkpoint not found: {checkpoint_path}\n"
++            "Set SAM3_CHECKPOINT to the .pt file, or omit it to download from HF."
++        )
++
+     # Setup torch settings for Ampere+ GPUs as recommended
+     if torch.cuda.is_available():
+         torch.backends.cuda.matmul.allow_tf32 = True
+@@ -262,8 +278,16 @@ def main(
+ 
+     logger.info("Loading SAM3 model...")
+     try:
+-        # Assuming build_sam3_image_model loads default checkpoint
+-        _MODEL = build_sam3_image_model(enable_inst_interactivity=True)
++        if checkpoint_path is not None:
++            logger.info(f"Using local checkpoint: {checkpoint_path}")
++            _MODEL = build_sam3_image_model(
++                enable_inst_interactivity=True,
++                checkpoint_path=checkpoint_path,
++                load_from_HF=False,
++            )
++        else:
++            # Upstream behaviour: download the gated weights from Hugging Face.
++            _MODEL = build_sam3_image_model(enable_inst_interactivity=True)
+     except Exception as e:
+         logger.error(f"Error building SAM3 model: {e}")
+         raise

@@ -38,9 +38,78 @@ bash scripts/use_mirror.sh              # 或 bash scripts/use_mirror.sh tuna
 
 # 4. 搭建 ASPIRE 环境并验证
 bash scripts/setup_aspire_env.sh
+
+# 5.（仅 Blackwell 显卡 sm_120）切换到 cu128 torch
+bash scripts/switch_cu128_blackwell.sh
 ```
 
 第 4 步会自动探测可用的离屏渲染后端（EGL 或 OSMesa）并跑冒烟测试。
+
+## Blackwell（sm_120）必须切 cu128
+
+**症状**：`torch.cuda.is_available()` 返回 `True`，设备名和架构都识别正确，但第一次真正的内核执行就失败：
+
+```
+CUDA error: no kernel image is available for execution on the device
+```
+
+**原因**：ASPIRE 的 `uv.lock` 钉死 `torch 2.12.1+cu126`。从 `libtorch_cuda.so` 里提取的实际内核架构是：
+
+```
+sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_89 sm_90 sm_100
+```
+
+**没有 sm_120**。sm_100 是数据中心 Blackwell，与工作站/消费级 Blackwell（sm_120）**指令集不通用**，CUDA 二进制不能跨架构复用。
+
+**修法**：`bash scripts/switch_cu128_blackwell.sh`
+
+| 组件 | 切换前 | 切换后 |
+|---|---|---|
+| torch | 2.12.1+cu126 | **2.11.0+cu128** |
+| torchvision | 0.27.1+cu126 | **0.26.0+cu128** |
+| triton | 3.7.1 | **3.6.0** |
+| CUDA 组件 | 12.6.x | **12.8.1**（`cuda-toolkit` 元包） |
+
+三个必须知道的细节：
+
+1. **`2.12.1+cu128` 不存在** —— cu128 分支最高到 `2.11.0`（镜像 404、官方 403）。这是**降级**换 GPU 可用性。
+2. **uv 无法从 `download.pytorch.org` 解析** —— 那不是标准 PEP 503 索引。脚本用 `curl` 下轮子再本地安装。
+3. **CUDA 12.8 组件不是可选项** —— torch 的 reduction 内核走**运行时 nvrtc JIT**，nvrtc 12.6 不认识 `-arch=sm_120`，会报：
+   ```
+   nvrtc: error: invalid value for --gpu-architecture (-arch)
+   ```
+   这个错误**只在推理时才暴露**（`import torch` 和简单 matmul 都正常），表现为 SAM3 分割返回 HTTP 500。注意包版本号不等于 CUDA 版本（`cufft 11.3.x`、`curand 10.3.x` 都是 12.8 构建），所以要装 `cuda-toolkit` 元包让它解析整套。
+
+**警告**：`uv sync --frozen` 会把 torch 装回 cu126，**撤销这个切换**。每次 sync 之后都要重跑一次。
+
+## SAM3 权重：用本地文件，别走 HuggingFace
+
+`facebook/sam3` 是 gated 模型。上游 `launch_sam3_server.py` 调用 `build_sam3_image_model(enable_inst_interactivity=True)`，内部走 `load_from_HF=True`，会尝试下载。
+
+`patches/aspire-sam3-local-checkpoint.patch` 加了本地权重支持，优先级：
+
+```
+--checkpoint-path  >  $SAM3_CHECKPOINT  >  HuggingFace 下载（上游行为）
+```
+
+```bash
+export SAM3_CHECKPOINT=/path/to/sam3.pt
+bash scripts/common/start_perception_servers.sh --gpu-sam3 0 --gpu-graspnet 0 --no-molmo
+```
+
+**只需要权重文件**，不需要 `config.json`：`_load_checkpoint` 只做 `torch.load` 并筛选 `detector.` / `tracker.` 前缀的键，模型架构由代码构造。BPE tokenizer 已打包在 `sam3/assets/` 里。
+
+**SAM 3.0 与 3.1 不通用**：3.1 的 Object Multiplex 是**视频**特性，`build_sam3_image_model` 没有 `version` 参数（硬编码 `version="sam3"`）。两者 detector 键集也不同（共有 1130，各独有 26 / 36，3.1 多出 `backbone.vision_backbone.interactive_convs.*`）。用 3.1 的权重喂图像路径不会报错（`strict=False`），但会静默跳过对不上的键。
+
+## 单卡也能跑感知栈
+
+ASPIRE 的参考拓扑是 8 卡（0=SAM3、1=GraspNet、2=PyRoKi、3–7=任务槽），但这只是**并发上限**，不是硬性要求。单卡共享可行：
+
+```bash
+bash scripts/common/start_perception_servers.sh --gpu-sam3 0 --gpu-graspnet 0 --no-molmo
+```
+
+实测占用：SAM3 3.9 GB + GraspNet 380 MB，72 GB 卡上余量充足。
 
 ## 镜像加速（国内环境）
 
@@ -128,12 +197,23 @@ CUDA 12.8 对两者都兼容。
 
 ## 状态
 
-| 项目 | 环境 | 冒烟测试 | 渲染后端 |
-|---|---|---|---|
-| ASPIRE（本地，Ubuntu 24.04 + RTX 5070 Ti） | ✅ | ✅ | EGL |
-| ASPIRE（阿里云 DSW，Ubuntu 22.04 + RTX PRO 5000） | ✅ | ✅ | OSMesa |
-| ENPIRE | ⏳ 未开始 | — | — |
-| Dream-RSI | — | — | 上游无代码可复现 |
+| 项目 | 环境 | 冒烟测试 | 渲染后端 | GPU |
+|---|---|---|---|---|
+| ASPIRE（本地，Ubuntu 24.04 + RTX 5070 Ti） | ✅ | ✅ | EGL | ✅ sm_120 |
+| ASPIRE（阿里云 DSW，Ubuntu 22.04 + RTX PRO 5000） | ✅ | ✅ | OSMesa | ✅ sm_120（cu128） |
+| ENPIRE | ⏳ 未开始 | — | — | — |
+| Dream-RSI | — | — | — | 上游无代码可复现 |
+
+已验证的服务器组件（阿里云 DSW，单卡 RTX PRO 5000 72GB）：
+
+| 组件 | 状态 |
+|---|---|
+| torch 2.11.0+cu128 / CUDA 12.8.1 | ✅ |
+| cuRobo 0.7.8（sm_120 编译） | ✅ |
+| SAM3 服务（本地权重） | ✅ 推理通过，3.9 GB 显存 |
+| GraspNet 服务 | ✅ UP，380 MB 显存 |
+| PyRoKi 服务 | ✅ UP（CPU） |
+| LLM Gateway | ✅ 已验证，尚未接入 ASPIRE |
 
 ## 参考
 

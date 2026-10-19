@@ -1,5 +1,5 @@
 diff --git a/pyproject.toml b/pyproject.toml
-index 5e61e4c..d21b8e8 100644
+index 5e61e4c..047d96b 100644
 --- a/pyproject.toml
 +++ b/pyproject.toml
 @@ -19,8 +19,14 @@ extend-exclude = "deprecated/"
@@ -9,33 +9,32 @@ index 5e61e4c..d21b8e8 100644
 -version_scheme = "no-guess-dev"
 -local_scheme = "dirty-tag"
 +# Local patch (ASPIRE checkout): pin the version so metadata generation does not
-+# depend on git tags or working-tree state. Upstream derives 0.7.8 from the
-+# `v0.7.8` tag, which shallow submodule clones lose; the stock `no-guess-dev`
-+# scheme then appends `.post1.dev0` and `dirty-tag` adds a `+dirty` suffix, so
-+# neither matches uv.lock. `plain` + `no-local-version` yields exactly `0.7.8`.
-+version_scheme = "plain"
++# depend on git tags or working-tree state. Shallow submodule clones lose the
++# v0.7.8 tag and uv's isolated build env cannot see .git, so stock
++# `no-guess-dev` yielded 0.0.post1.dev1, which mismatches uv.lock.
++# setuptools_scm 10.x removed `plain`; `only-version` replaces it.
++version_scheme = "only-version"
 +local_scheme = "no-local-version"
 +fallback_version = "0.7.8"
- 
+
  [tool.isort]
  # see https://github.com/PyCQA/isort#multi-line-output-modes
 diff --git a/setup.py b/setup.py
-index 393d489..aa3e690 100644
+index 393d489..3a1be5a 100644
 --- a/setup.py
 +++ b/setup.py
-@@ -32,7 +32,14 @@ extra_cuda_args = {
+@@ -32,7 +32,13 @@ extra_cuda_args = {
          "--fmad=true",
          "--prec-div=false",
          "--prec-sqrt=false",
 -    ]
-+        # Local patch (ASPIRE checkout): build as C++17. This header defines a
-+        # global `lerp`, which clashes with `std::lerp` that libstdc++ exposes
-+        # under C++20 (gcc 13). C++17 keeps the upstream code compiling as-is.
++        # Local patch: build as C++17; helper_math.h defines a global `lerp`
++        # that clashes with std::lerp under C++20 (gcc 13).
 +        "-std=c++17",
 +    ],
 +    "cxx": [
 +        "-std=c++17",
 +    ],
  }
- 
+
  if sys.platform == "win32":
