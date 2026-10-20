@@ -201,7 +201,7 @@ CUDA 12.8 对两者都兼容。
 | 项目 | 环境 | 冒烟测试 | 渲染后端 | GPU |
 |---|---|---|---|---|
 | ASPIRE（本地，Ubuntu 24.04 + RTX 5070 Ti） | ✅ | ✅ | EGL | ✅ sm_120 |
-| ASPIRE（阿里云 DSW，Ubuntu 22.04 + RTX PRO 5000） | ✅ | ✅ | OSMesa | ✅ sm_120（cu128） |
+| ASPIRE（阿里云 DSW，Ubuntu 22.04 + RTX PRO 5000） | ✅ | ✅ | EGL | ✅ sm_120（cu128） |
 | ENPIRE | ⏳ 未开始 | — | — | — |
 | Dream-RSI | — | — | — | 上游无代码可复现 |
 
@@ -218,4 +218,4 @@ CUDA 12.8 对两者都兼容。
 
 ## 参考
 
-调研笔记见 [`docs/RSI_RESEARCH.md`](docs/RSI_RESEARCH.md)。
+调研笔记见 [`docs/RSI_RESEARCH.md`](docs/RSI_RESEARCH.md)；环境运维经验见 [`docs/OPS_NOTES.md`](docs/OPS_NOTES.md)。
