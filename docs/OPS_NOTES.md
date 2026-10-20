@@ -265,3 +265,45 @@ ssh server 'pgrep -f copy_new.sh >/dev/null && echo RUNNING'
 3. 可能把 cuRobo 的 `.so` 删掉
 
 所以对这个 venv 而言，`uv sync` 不是幂等的「同步到干净状态」，而是「同步到不可用状态」。用完必须重跑 `switch_cu128_blackwell.sh` + CUDA 组件补装 + 必要时重编 cuRobo。
+
+---
+
+## 12. `~/.libero/config.yaml` 存的是绝对路径，搬目录后不会自动更新
+
+### 现象
+
+迁移到 `/mnt/data/usr/wzt/RSI` 之后跑 batch，日志里仍然出现旧路径：
+
+```
+[Warning]: datasets path /mnt/workspace/wzt/RSI/third_party/ASPIRE/... does not exist!
+```
+
+**而且不会报错**——因为旧目录还在，LIBERO 就从旧树里加载资产。这时新代码配旧资产，行为难以解释，且删掉旧目录后会突然失败。
+
+### 原因
+
+`setup_aspire_env.sh` 只在配置文件不存在时才生成它：
+
+```bash
+if [ -f "$HOME/.libero/config.yaml" ]; then
+  echo "  already exists"
+else
+  echo "N" | "$VENV/bin/python3" -c "import libero" >/dev/null
+fi
+```
+
+文件里存的是全绝对路径（`assets`、`bddl_files`、`benchmark_root`、`datasets`、`init_states`），换目录后必须手动改写。
+
+### 处理
+
+```bash
+NEW=/mnt/data/usr/wzt/RSI/Submodule/ASPIRE/aspire/sim/cap/third_party/LIBERO-PRO/libero/libero
+OLD=/mnt/workspace/wzt/RSI/third_party/ASPIRE/aspire/sim/cap/third_party/LIBERO-PRO/libero/libero
+sed -i "s|$OLD|$NEW|g" ~/.libero/config.yaml
+```
+
+**迁移后应该直接删掉这个文件让它重新生成**，比改路径更稳妥。
+
+### 附带确认
+
+`datasets` 指向的目录本来就不存在（LIBERO 用它做演示数据增强），运行时会打印 warning，不影响 init states 加载——init states 来自 `init_files/`，这个目录是有的。
